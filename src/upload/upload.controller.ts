@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -36,11 +37,21 @@ export class UploadController {
         success: true,
         url: result.url,
         key: result.key,
+        file: result.fileRecord,
       };
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Upload error:', error);
       throw new HttpException('Failed to upload image', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  @Get('files')
+  async listFiles() {
+    const files = await this.uploadService.listFiles();
+    return {
+      success: true,
+      items: files,
+    };
   }
 }

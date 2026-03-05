@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Express } from 'express';
+import { FileRepository, type FileRecord } from './file.repository';
 
 const PRESIGNED_URL_EXPIRES_IN = 3600; // 1 giờ
 
@@ -10,7 +11,7 @@ export class UploadService {
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
 
-  constructor() {
+  constructor(private readonly fileRepository: FileRepository) {
     const region = process.env.AWS_REGION || 'ap-southeast-1';
     const bucket = process.env.AWS_S3_BUCKET;
 
@@ -24,7 +25,9 @@ export class UploadService {
     this.bucketName = bucket || '';
   }
 
-  async uploadImage(file: Express.Multer.File): Promise<{ url: string; key: string }> {
+  async uploadImage(
+    file: Express.Multer.File,
+  ): Promise<{ url: string; key: string; fileRecord: FileRecord }> {
     if (!file) {
       throw new Error('File is required');
     }
@@ -58,6 +61,18 @@ export class UploadService {
     const url = await getSignedUrl(this.s3Client, getCommand, {
       expiresIn: PRESIGNED_URL_EXPIRES_IN,
     });
-    return { url, key };
+    const fileRecord = await this.fileRepository.create({
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      s3Key: key,
+      s3Url: url,
+    });
+
+    return { url, key, fileRecord };
+  }
+
+  async listFiles(): Promise<FileRecord[]> {
+    return this.fileRepository.findAll();
   }
 }
