@@ -12,28 +12,15 @@ export class UploadService {
 
   constructor() {
     const region = process.env.AWS_REGION || 'ap-southeast-1';
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
     const bucket = process.env.AWS_S3_BUCKET;
 
-    if (!accessKeyId || !secretAccessKey || !bucket) {
+    if (!bucket) {
       // eslint-disable-next-line no-console
-      console.warn(
-        '[UploadService] Missing AWS env vars: AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_S3_BUCKET',
-      );
+      console.warn('[UploadService] AWS_S3_BUCKET is not set; upload will fail until configured.');
     }
 
-    this.s3Client = new S3Client({
-      region,
-      credentials:
-        accessKeyId && secretAccessKey
-          ? {
-              accessKeyId,
-              secretAccessKey,
-            }
-          : undefined,
-    });
-
+    // Không truyền credentials: SDK dùng default credential chain (IAM role trên EC2/ECS/Lambda, hoặc env/shared config khi chạy local).
+    this.s3Client = new S3Client({ region });
     this.bucketName = bucket || '';
   }
 
