@@ -66,4 +66,40 @@ export class FileRepository {
       createdAt: row.created_at,
     }));
   }
+
+  async findById(id: number): Promise<FileRecordRow | null> {
+    const conn = getPool();
+    await ensureFilesTable(conn);
+
+    const [rows] = await conn.query<
+      (RowDataPacket & {
+        id: number;
+        original_name: string;
+        mime_type: string;
+        size: number;
+        s3_key: string;
+        created_at: Date;
+      })[]
+    >(
+      `SELECT id, original_name, mime_type, size, s3_key, created_at FROM ${FILES_TABLE} WHERE id = ?`,
+      [id],
+    );
+
+    if (!rows?.length) return null;
+    const row = rows[0];
+    return {
+      id: row.id,
+      originalName: row.original_name,
+      mimeType: row.mime_type,
+      size: row.size,
+      s3Key: row.s3_key,
+      createdAt: row.created_at,
+    };
+  }
+
+  async deleteById(id: number): Promise<void> {
+    const conn = getPool();
+    await ensureFilesTable(conn);
+    await conn.execute(`DELETE FROM ${FILES_TABLE} WHERE id = ?`, [id]);
+  }
 }

@@ -1,6 +1,9 @@
 import {
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseIntPipe,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -53,5 +56,19 @@ export class UploadController {
       success: true,
       items: files,
     };
+  }
+
+  @Delete('files/:id')
+  async deleteFile(@Param('id', ParseIntPipe) id: number) {
+    try {
+      await this.uploadService.deleteFile(id);
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Delete failed';
+      if (message === 'File not found') {
+        throw new HttpException(message, HttpStatus.NOT_FOUND);
+      }
+      throw new HttpException(message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

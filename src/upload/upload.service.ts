@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Express } from 'express';
 import { FileRepository, type FileRecord } from './file.repository';
@@ -95,5 +100,17 @@ export class UploadService {
       })),
     );
     return withFreshUrls;
+  }
+
+  async deleteFile(id: number): Promise<void> {
+    const row = await this.fileRepository.findById(id);
+    if (!row) throw new Error('File not found');
+
+    if (this.bucketName) {
+      await this.s3Client.send(
+        new DeleteObjectCommand({ Bucket: this.bucketName, Key: row.s3Key }),
+      );
+    }
+    await this.fileRepository.deleteById(id);
   }
 }
