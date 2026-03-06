@@ -4,7 +4,8 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Express } from 'express';
 import { FileRepository, type FileRecord } from './file.repository';
 
-const PRESIGNED_URL_EXPIRES_IN = 3600; // 1 giờ
+/** Presigned URL tối đa 7 ngày (AWS). Dùng khi list/trả URL cho FE — mỗi lần mở trang sẽ có URL mới. */
+const PRESIGNED_URL_EXPIRES_IN = 3600; // 1 giờ (đủ dùng vì list lại là có URL mới)
 
 @Injectable()
 export class UploadService {
@@ -58,21 +59,41 @@ export class UploadService {
       Bucket: this.bucketName,
       Key: key,
     });
-    const url = await getSignedUrl(this.s3Client, getCommand, {
-      expiresIn: PRESIGNED_URL_EXPIRES_IN,
-    });
-    const fileRecord = await this.fileRepository.create({
+    const url = await this.getPresignedUrl(key);
+    const row = await this.fileRepository.create({
       originalName: file.originalname,
       mimeType: file.mimetype,
       size: file.size,
       s3Key: key,
-      s3Url: url,
     });
+    const fileRecord: FileRecord = { ...row, s3Url: url };
 
     return { url, key, fileRecord };
   }
 
+  /**
+   * Tạo presigned URL on-demand. Gọi khi list files để FE luôn có URL còn hiệu lực
+   * (presigned không thể vô thời hạn, tối đa 7 ngày; tạo mới mỗi lần list là hợp lý).
+   */
+  async getPresignedUrl(key: string): Promise<string> {
+    if (!this.bucketName) throw new Error('AWS_S3_BUCKET is not configured');
+    const getCommand = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+    return getSignedUrl(this.s3Client, getCommand, {
+      expiresIn: PRESIGNED_URL_EXPIRES_IN,
+    });
+  }
+
   async listFiles(): Promise<FileRecord[]> {
-    return this.fileRepository.findAll();
+    const files = await this.fileRepository.findAll();
+    const withFreshUrls = await Promise.all(
+      files.map(async (f) => ({
+        ...f,
+        s3Url: await this.getPresignedUrl(f.s3Key),
+      })),
+    );
+    return withFreshUrls;
   }
 }
