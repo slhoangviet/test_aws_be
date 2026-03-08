@@ -5,13 +5,14 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Body,
   UploadedFile,
   UseInterceptors,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { UploadService } from './upload.service';
+import { UploadService, type ProcessImageOptions } from './upload.service';
 
 @Controller()
 export class UploadController {
@@ -21,7 +22,7 @@ export class UploadController {
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
+        fileSize: 10 * 1024 * 1024, // 10MB cho xử lý ảnh
       },
     }),
   )
@@ -56,6 +57,28 @@ export class UploadController {
       success: true,
       items: files,
     };
+  }
+
+  @Post('files/:id/process')
+  async processImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: ProcessImageOptions,
+  ) {
+    try {
+      const result = await this.uploadService.processImage(id, {
+        width: body.width,
+        height: body.height,
+        format: body.format || 'webp',
+        quality: body.quality ?? 80,
+      });
+      return { success: true, url: result.url, key: result.key };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Process failed';
+      if (message === 'File not found') {
+        throw new HttpException(message, HttpStatus.NOT_FOUND);
+      }
+      throw new HttpException(message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   @Delete('files/:id')

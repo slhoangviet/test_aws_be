@@ -1,7 +1,7 @@
 {
-  "name": "test_aws_be",
+  "name": "image-processor-be",
   "version": "1.0.0",
-  "description": "Basic NestJS backend for AWS test",
+  "description": "Backend xử lý ảnh: upload, resize, đổi định dạng, nén chất lượng (S3, SES)",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -19,7 +19,8 @@
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@types/multer": "^1.4.12",

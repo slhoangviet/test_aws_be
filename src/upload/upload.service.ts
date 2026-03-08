@@ -1,7 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 import type { Express } from 'express';
+import sharp from 'sharp';
 import { FileRepository, type FileRecord } from './file.repository';
+
+export type ProcessImageOptions = {
+  width?: number;
+  height?: number;
+  format?: 'webp' | 'jpeg' | 'png';
+  quality?: number;
+};
 
 @Injectable()
 export class UploadService {
@@ -68,7 +82,63 @@ export class UploadService {
   }
 
   private getPublicUrl(key: string): string {
+    if (!this.cdnBaseUrl) return `/${key}`;
     return `${this.cdnBaseUrl}/${key}`;
+  }
+
+  private async getObjectBuffer(key: string): Promise<Buffer> {
+    const res = await this.s3Client.send(
+      new GetObjectCommand({ Bucket: this.bucketName, Key: key }),
+    );
+    const stream = res.Body as Readable;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks);
+  }
+
+  async processImage(
+    id: number,
+    options: ProcessImageOptions,
+  ): Promise<{ url: string; key: string }> {
+    if (!this.bucketName) throw new Error('AWS_S3_BUCKET is not configured');
+
+    const row = await this.fileRepository.findById(id);
+    if (!row) throw new Error('File not found');
+
+    const width = options.width && options.width > 0 ? Math.min(options.width, 4000) : undefined;
+    const height = options.height && options.height > 0 ? Math.min(options.height, 4000) : undefined;
+    const format = options.format || 'webp';
+    const quality = options.quality != null ? Math.min(100, Math.max(1, options.quality)) : 80;
+
+    const paramsHash = [width ?? '', height ?? '', format, quality].join('-');
+    const ext = format === 'jpeg' ? 'jpg' : format;
+    const processedKey = `processed/${id}-${paramsHash}.${ext}`;
+
+    const inputBuffer = await this.getObjectBuffer(row.s3Key);
+
+    let pipeline = sharp(inputBuffer);
+
+    if (width || height) {
+      pipeline = pipeline.resize(width, height, { fit: 'inside', withoutEnlargement: true });
+    }
+
+    const formatOpts =
+      format === 'webp' ? { quality } : format === 'jpeg' ? { quality } : {};
+    const outputBuffer = await pipeline.toFormat(format, formatOpts).toBuffer();
+
+    const contentType =
+      format === 'webp' ? 'image/webp' : format === 'jpeg' ? 'image/jpeg' : 'image/png';
+
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: processedKey,
+        Body: outputBuffer,
+        ContentType: contentType,
+      }),
+    );
+
+    return { url: this.getPublicUrl(processedKey), key: processedKey };
   }
 
   async listFiles(): Promise<FileRecord[]> {
