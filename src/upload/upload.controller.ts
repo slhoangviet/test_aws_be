@@ -70,6 +70,10 @@ export class UploadController {
         height: body.height,
         format: body.format || 'webp',
         quality: body.quality ?? 80,
+        crop: body.crop,
+        brightness: body.brightness,
+        contrast: body.contrast,
+        saturation: body.saturation,
       });
       return { success: true, url: result.url, key: result.key };
     } catch (error) {

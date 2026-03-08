@@ -15,6 +15,12 @@ export type ProcessImageOptions = {
   height?: number;
   format?: 'webp' | 'jpeg' | 'png';
   quality?: number;
+  /** Crop: left, top, width, height (px) */
+  crop?: { left: number; top: number; width: number; height: number };
+  /** 1 = không đổi. brightness/saturation: 0.5–2, contrast: 0.5–2 */
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
 };
 
 @Injectable()
@@ -109,14 +115,47 @@ export class UploadService {
     const height = options.height && options.height > 0 ? Math.min(options.height, 4000) : undefined;
     const format = options.format || 'webp';
     const quality = options.quality != null ? Math.min(100, Math.max(1, options.quality)) : 80;
+    const crop = options.crop;
+    const brightness = options.brightness != null ? Math.min(2, Math.max(0.2, options.brightness)) : undefined;
+    const saturation = options.saturation != null ? Math.min(2, Math.max(0, options.saturation)) : undefined;
+    const contrast = options.contrast != null ? Math.min(2, Math.max(0.2, options.contrast)) : undefined;
 
-    const paramsHash = [width ?? '', height ?? '', format, quality].join('-');
+    const paramsHash = [
+      width ?? '',
+      height ?? '',
+      format,
+      quality,
+      crop ? `${crop.left}-${crop.top}-${crop.width}-${crop.height}` : '',
+      brightness ?? '',
+      contrast ?? '',
+      saturation ?? '',
+    ].join('_');
     const ext = format === 'jpeg' ? 'jpg' : format;
     const processedKey = `processed/${id}-${paramsHash}.${ext}`;
 
     const inputBuffer = await this.getObjectBuffer(row.s3Key);
 
     let pipeline = sharp(inputBuffer);
+
+    if (crop && crop.width > 0 && crop.height > 0) {
+      pipeline = pipeline.extract({
+        left: Math.max(0, Math.floor(crop.left)),
+        top: Math.max(0, Math.floor(crop.top)),
+        width: Math.max(1, Math.floor(crop.width)),
+        height: Math.max(1, Math.floor(crop.height)),
+      });
+    }
+
+    if (brightness !== undefined && brightness !== 1) {
+      pipeline = pipeline.modulate({ brightness });
+    }
+    if (saturation !== undefined && saturation !== 1) {
+      pipeline = pipeline.modulate({ saturation });
+    }
+    if (contrast !== undefined && contrast !== 1) {
+      const mid = 128;
+      pipeline = pipeline.linear(contrast, mid * (1 - contrast));
+    }
 
     if (width || height) {
       pipeline = pipeline.resize(width, height, { fit: 'inside', withoutEnlargement: true });
