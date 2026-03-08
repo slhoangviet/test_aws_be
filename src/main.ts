@@ -2,11 +2,8 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { appConfig } from './config';
 
-/**
- * Backend chạy tại subdomain api.{domain}.
- * Route gốc: /upload, /files, /files/:id (không dùng prefix /api).
- */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -18,7 +15,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = process.env.PORT || 3000;
+  const port = appConfig.port;
   await app.listen(port);
   // eslint-disable-next-line no-console
   console.log(`NestJS backend is running on http://localhost:${port}`);

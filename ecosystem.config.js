@@ -3,11 +3,9 @@ module.exports = {
     {
       name: 'test_aws_be',
       script: 'dist/main.js',
+      cwd: __dirname,
       instances: 1,
       exec_mode: 'fork',
-      env: {
-        PORT: 3001,
-      },
       watch: false,
     },
   ],
