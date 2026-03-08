@@ -6,4 +6,5 @@ export const appConfig = {
   corsOrigin: process.env.CORS_ORIGIN,
   localeHeader: process.env.LOCALE_HEADER || 'x-locale',
   defaultLocale: process.env.DEFAULT_LOCALE || 'vi',
+  isProduction: process.env.NODE_ENV === 'production',
 };
