@@ -10,7 +10,7 @@ export class EmailController {
     const email = typeof body.to === 'string' ? body.to.trim() : '';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
-      throw new HttpException('Email người nhận không hợp lệ', HttpStatus.BAD_REQUEST);
+      throw new HttpException('error.invalidEmail', HttpStatus.BAD_REQUEST);
     }
 
     try {
@@ -20,8 +20,10 @@ export class EmailController {
         text: body.text,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Gửi email thất bại';
-      throw new HttpException(message, HttpStatus.INTERNAL_SERVER_ERROR);
+      // eslint-disable-next-line no-console
+      console.error('Send email error:', error);
+      throw new HttpException('error.sendEmailFailed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }
+ 

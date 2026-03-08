@@ -28,11 +28,11 @@ export class UploadController {
   )
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
-      throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+      throw new HttpException('error.noFile', HttpStatus.BAD_REQUEST);
     }
 
     if (!file.mimetype.startsWith('image/')) {
-      throw new HttpException('Only image files are allowed', HttpStatus.BAD_REQUEST);
+      throw new HttpException('error.onlyImages', HttpStatus.BAD_REQUEST);
     }
 
     try {
@@ -46,7 +46,7 @@ export class UploadController {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Upload error:', error);
-      throw new HttpException('Failed to upload image', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException('error.uploadFailed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -77,9 +77,9 @@ export class UploadController {
       });
       return { success: true, url: result.url, key: result.key };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Process failed';
+      const message = error instanceof Error ? error.message : 'error.processFailed';
       if (message === 'File not found') {
-        throw new HttpException(message, HttpStatus.NOT_FOUND);
+        throw new HttpException('error.fileNotFound', HttpStatus.NOT_FOUND);
       }
       throw new HttpException(message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -91,9 +91,9 @@ export class UploadController {
       await this.uploadService.deleteFile(id);
       return { success: true };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Delete failed';
+      const message = error instanceof Error ? error.message : 'error.deleteFailed';
       if (message === 'File not found') {
-        throw new HttpException(message, HttpStatus.NOT_FOUND);
+        throw new HttpException('error.fileNotFound', HttpStatus.NOT_FOUND);
       }
       throw new HttpException(message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
