@@ -18,7 +18,15 @@ export class EmailService {
   private getClient(): SESClient {
     if (this.client) return this.client;
     const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-2';
-    this.client = new SESClient({ region });
+    const sesConfig: { region: string; credentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string } } = { region };
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      sesConfig.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        ...(process.env.AWS_SESSION_TOKEN && { sessionToken: process.env.AWS_SESSION_TOKEN }),
+      };
+    }
+    this.client = new SESClient(sesConfig);
     return this.client;
   }
 
