@@ -9,4 +9,4 @@ Backend NestJS chạy tại subdomain **api.{domain}**. Route gốc (không pref
 
 Cấu hình: copy `.env.example` → `.env` và sửa giá trị. Production nên set `CORS_ORIGIN` trùng domain FE (vd S3/CloudFront).
 
-**Email (SES SMTP):** điền `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (email From phải đã verify trong SES).
+**Email (SES):** dùng IAM (role trên EC2/ECS hoặc AWS_ACCESS_KEY_ID/SECRET khi chạy local). Cấu hình `SES_FROM` (email/domain đã verify trong SES). IAM user/role cần quyền `ses:SendEmail`, `ses:SendRawEmail`.

@@ -1,4 +1,8 @@
-import * as nodemailer from 'nodemailer';
+import {
+  SESClient,
+  SendEmailCommand,
+  type SendEmailCommandInput,
+} from '@aws-sdk/client-ses';
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 
 export type SendTestEmailDto = {
@@ -9,50 +13,48 @@ export type SendTestEmailDto = {
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
+  private client: SESClient | null = null;
 
-  private getTransporter(): nodemailer.Transporter {
-    if (this.transporter) return this.transporter;
+  private getClient(): SESClient {
+    if (this.client) return this.client;
+    const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-2';
+    this.client = new SESClient({ region });
+    return this.client;
+  }
 
-    const host = process.env.SMTP_HOST;
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-
-    if (!host || !user || !pass) {
+  private getFromAddress(): string {
+    const from = process.env.SES_FROM;
+    if (!from) {
       throw new HttpException(
-        'SMTP chưa cấu hình (SMTP_HOST, SMTP_USER, SMTP_PASS)',
+        'SES_FROM chưa cấu hình (email/domain đã verify trong SES)',
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
-
-    const port = Number(process.env.SMTP_PORT) || 587;
-    const from = process.env.SMTP_FROM || user;
-
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
-      tls: { rejectUnauthorized: true },
-    });
-
-    return this.transporter;
+    return from;
   }
 
   async sendTestEmail(dto: SendTestEmailDto): Promise<{ success: boolean; messageId?: string }> {
-    const transporter = this.getTransporter();
-    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+    const ses = this.getClient();
+    const from = this.getFromAddress();
 
-    const info = await transporter.sendMail({
-      from: `"Test" <${from}>`,
-      to: dto.to,
-      subject: dto.subject ?? 'Test email từ backend',
-      text: dto.text ?? 'Đây là email test từ AWS SES SMTP.',
-      html: dto.text
-        ? `<p>${dto.text.replace(/\n/g, '<br>')}</p>`
-        : '<p>Đây là email test từ AWS SES SMTP.</p>',
-    });
+    const textContent = dto.text ?? 'Đây là email test từ AWS SES (IAM).';
+    const htmlContent = textContent
+      ? `<p>${textContent.replace(/\n/g, '<br>')}</p>`
+      : '<p>Đây là email test từ AWS SES (IAM).</p>';
 
-    return { success: true, messageId: info.messageId };
+    const params: SendEmailCommandInput = {
+      Source: `"Test" <${from}>`,
+      Destination: { ToAddresses: [dto.to] },
+      Message: {
+        Subject: { Data: dto.subject ?? 'Test email từ backend', Charset: 'UTF-8' },
+        Body: {
+          Text: { Data: textContent, Charset: 'UTF-8' },
+          Html: { Data: htmlContent, Charset: 'UTF-8' },
+        },
+      },
+    };
+
+    const result = await ses.send(new SendEmailCommand(params));
+    return { success: true, messageId: result.MessageId };
   }
 }
