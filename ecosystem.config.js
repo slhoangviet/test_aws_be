@@ -1,12 +1,15 @@
 module.exports = {
   apps: [
     {
-      name: 'test_aws_be',
+      name: 'caro-be',
       script: 'dist/main.js',
-      cwd: __dirname,
+      cwd: './',
       instances: 1,
-      exec_mode: 'fork',
+      autorestart: true,
       watch: false,
+      env: {
+        NODE_ENV: 'production',
+      },
     },
   ],
 };

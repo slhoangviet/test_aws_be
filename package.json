@@ -1,7 +1,7 @@
 {
-  "name": "image-processor-be",
+  "name": "caro-game-be",
   "version": "1.0.0",
-  "description": "Backend xử lý ảnh: upload, resize, đổi định dạng, nén chất lượng (S3, SES)",
+  "description": "Backend game Caro realtime với NestJS + WebSocket",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -9,21 +9,18 @@
     "start:dev": "ts-node-dev -r tsconfig-paths/register --respawn src/main.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.740.0",
-    "@aws-sdk/client-ses": "^3.740.0",
-    "@aws-sdk/s3-request-presigner": "^3.740.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/websockets": "^11.0.0",
+    "@nestjs/platform-socket.io": "^11.0.0",
+    "socket.io": "^4.8.0",
     "dotenv": "^16.4.5",
-    "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
-    "sharp": "^0.33.5"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@types/multer": "^1.4.12",
     "@types/node": "^22.10.2",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
